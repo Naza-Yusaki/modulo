@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost:3306
--- Tiempo de generación: 10-03-2026 a las 14:36:39
+-- Tiempo de generación: 10-03-2026 a las 17:15:22
 -- Versión del servidor: 8.0.30
 -- Versión de PHP: 8.1.10
 
@@ -44,8 +44,11 @@ CREATE TABLE `historial_salida` (
 --
 
 INSERT INTO `historial_salida` (`id_historial_salida`, `id_producto`, `nombre_producto`, `modulo`, `cantidad_grande`, `cantidad_unidad`, `documento_ref`, `fecha_salida`, `destino`) VALUES
-(5, 1, 'cocacola 1.5', 'Caja', 1, 0, 'firmado', '2026-03-09 13:37:44', 'lirios'),
-(6, 3, 'arroz diana', 'Paca', 2, 0, 'firmado', '2026-03-10 07:38:53', 'lirios');
+(5, NULL, 'cocacola 1.5', 'Caja', 1, 0, 'firmado', '2026-03-09 13:37:44', 'lirios'),
+(6, 3, 'arroz diana', 'Paca', 2, 0, 'firmado', '2026-03-10 07:38:53', 'lirios'),
+(7, 3, 'arroz diana', 'Paca', 2, 6, 'firmado', '2026-03-10 09:56:14', 'lirios'),
+(8, 3, 'arroz diana', 'Paca', 0, 0, 'DEVOLUCIÓN - Producto equivocado', '2026-03-10 09:58:37', 'Producto equivocado'),
+(9, 3, 'arroz diana', 'Paca', 0, 0, 'DEVOLUCIÓN - Error en envío', '2026-03-10 12:04:19', 'Error en envío');
 
 -- --------------------------------------------------------
 
@@ -61,6 +64,9 @@ CREATE TABLE `historial_venta` (
   `cantidad_grande` int NOT NULL,
   `cantidad_unidad` int NOT NULL,
   `precio` decimal(10,2) NOT NULL,
+  `descuento_aplicado` decimal(10,2) DEFAULT '0.00',
+  `precio_original` decimal(10,2) DEFAULT '0.00',
+  `motivo_descuento` varchar(255) DEFAULT NULL,
   `fecha_hora` datetime DEFAULT CURRENT_TIMESTAMP,
   `metodo_pago` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -69,15 +75,22 @@ CREATE TABLE `historial_venta` (
 -- Volcado de datos para la tabla `historial_venta`
 --
 
-INSERT INTO `historial_venta` (`id_historial_venta`, `id_producto`, `nombre_producto`, `modulo`, `cantidad_grande`, `cantidad_unidad`, `precio`, `fecha_hora`, `metodo_pago`) VALUES
-(47, 2, 'arroz pinillar', 'Paca', 0, 2, 8000.00, '2026-03-10 09:13:34', 'nequi'),
-(48, 2, 'arroz pinillar', 'Paca', 0, 1, 4000.00, '2026-03-10 09:13:54', 'nequi'),
-(49, 2, 'arroz pinillar', 'Paca', 0, 4, 16000.00, '2026-03-10 09:14:14', 'efectivo'),
-(50, 2, 'arroz pinillar', 'Paca', 0, 4, 16000.00, '2026-03-10 09:14:41', 'efectivo'),
-(51, 2, 'arroz pinillar', 'Paca', 0, 1, 4000.00, '2026-03-10 09:15:21', 'efectivo'),
-(52, 2, 'arroz pinillar', 'Paca', 0, 2, 8000.00, '2026-03-10 09:15:57', 'nequi'),
-(53, 1, 'cocacola 1.5', 'Caja', 1, 0, 50000.00, '2026-03-10 09:33:10', 'efectivo'),
-(54, 3, 'arroz diana', 'Paca', 1, 0, 80000.00, '2026-03-10 09:34:30', 'nequi');
+INSERT INTO `historial_venta` (`id_historial_venta`, `id_producto`, `nombre_producto`, `modulo`, `cantidad_grande`, `cantidad_unidad`, `precio`, `descuento_aplicado`, `precio_original`, `motivo_descuento`, `fecha_hora`, `metodo_pago`) VALUES
+(47, 2, 'arroz pinillar', 'Paca', 0, 2, 0.00, 0.00, 0.00, NULL, '2026-03-10 09:13:34', 'DEVUELTA - Producto defectuoso'),
+(48, 2, 'arroz pinillar', 'Paca', 0, 1, 4000.00, 0.00, 0.00, NULL, '2026-03-10 09:13:54', 'nequi'),
+(49, 2, 'arroz pinillar', 'Paca', 0, 4, 16000.00, 0.00, 0.00, NULL, '2026-03-10 09:14:14', 'efectivo'),
+(50, 2, 'arroz pinillar', 'Paca', 0, 4, 16000.00, 0.00, 0.00, NULL, '2026-03-10 09:14:41', 'efectivo'),
+(51, 2, 'arroz pinillar', 'Paca', 0, 1, 4000.00, 0.00, 0.00, NULL, '2026-03-10 09:15:21', 'efectivo'),
+(52, 2, 'arroz pinillar', 'Paca', 0, 2, 8000.00, 0.00, 0.00, NULL, '2026-03-10 09:15:57', 'nequi'),
+(53, NULL, 'cocacola 1.5', 'Caja', 1, 0, 50000.00, 0.00, 0.00, NULL, '2026-03-10 09:33:10', 'efectivo'),
+(54, 3, 'arroz diana', 'Paca', 1, 0, 80000.00, 0.00, 0.00, NULL, '2026-03-10 09:34:30', 'nequi'),
+(55, 3, 'arroz diana', 'Paca', 0, 1, 3500.00, 0.00, 0.00, NULL, '2026-03-10 09:50:08', 'efectivo'),
+(56, 2, 'arroz pinillar', 'Paca', 0, 5, 20000.00, 0.00, 0.00, NULL, '2026-03-10 09:50:08', 'efectivo'),
+(57, 4, 'cocacola litro', 'Pedazo', 0, 1, 5000.00, 0.00, 0.00, NULL, '2026-03-10 10:03:23', 'efectivo'),
+(58, 2, 'arroz pinillar', 'Paca', 0, 2, -8000.00, 0.00, 0.00, NULL, '2026-03-10 10:03:42', 'DEVOLUCION: Producto defectuoso'),
+(59, 5, 'cocacola 1.5', 'Pedazo', 2, 0, 40000.00, 0.00, 0.00, NULL, '2026-03-10 11:01:34', 'efectivo'),
+(60, 3, 'arroz diana', 'Paca', 0, 6, 20000.00, 1000.00, 21000.00, 'Precio al mayor', '2026-03-10 12:01:18', 'efectivo'),
+(61, 5, 'cocacola 1.5', 'Pedazo', 6, 0, 100000.00, 20000.00, 120000.00, 'Cliente frecuente', '2026-03-10 12:02:41', 'nequi');
 
 -- --------------------------------------------------------
 
@@ -109,9 +122,10 @@ CREATE TABLE `productos` (
 --
 
 INSERT INTO `productos` (`id_producto`, `id_proveedor`, `nombre_producto`, `descripcion`, `marca`, `categoria`, `presentacion`, `modulo`, `cantidad_grande`, `cantidad_unidad`, `unidades_sueltas`, `precio_compra`, `precio_venta_unidad`, `precio_venta_cantidad_grande`, `fecha_hora`, `observaciones`) VALUES
-(1, 2, 'cocacola 1.5', 'bebida gaseosa', 'coca-cola', 'Bebidas', 'botella 1.5l', 'Caja', 5, 12, 1, 40000.00, 7000.00, 50000.00, '2026-03-09 12:35:13', ''),
-(2, 2, 'arroz pinillar', 'arroz pinillar de calidad', 'pinillar', 'Alimentos', 'pacax24', 'Paca', 1, 24, 2, 82000.00, 4000.00, 84000.00, '2026-03-09 12:39:01', 'ninguna'),
-(3, 4, 'arroz diana', 'alimentos para cocina', 'diana', 'Alimentos', 'bolsa 1k', 'Paca', 5, 24, 6, 75000.00, 3500.00, 80000.00, '2026-03-10 07:37:11', '');
+(2, 2, 'arroz pinillar', 'arroz pinillar de calidad', 'pinillar', 'Alimentos', 'pacax24', 'Paca', 0, 24, 23, 82000.00, 4000.00, 84000.00, '2026-03-09 12:39:01', 'ninguna'),
+(3, 4, 'arroz diana', 'alimentos para cocina', 'diana', 'Alimentos', 'bolsa 1k', 'Paca', 7, 24, 5, 75000.00, 3500.00, 80000.00, '2026-03-10 07:37:11', ''),
+(4, 2, 'cocacola litro', 'botella', 'coca-cola', 'Bebidas', 'botella litro', 'Pedazo', 5, 6, 5, 17000.00, 5000.00, 20000.00, '2026-03-10 10:01:57', 'uno de los productos esta suelto'),
+(5, 2, 'cocacola 1.5', 'por pedazo', 'coca-cola', 'Bebidas', 'cotella 1.5', 'Pedazo', 2, 6, 0, 17500.00, 7000.00, 20000.00, '2026-03-10 11:00:39', '');
 
 -- --------------------------------------------------------
 
@@ -135,8 +149,8 @@ CREATE TABLE `proveedores` (
 
 INSERT INTO `proveedores` (`id_proveedor`, `nombre_proveedor`, `telefono`, `direccion`, `email`, `contacto2`, `fecha_registro`) VALUES
 (2, 'madre tierraa', '3215754216', 'carr 17 calle13', 'madre_tierra@gmail.com', '', '2026-03-09 12:32:51'),
-(3, 'marta', '54654645654645', 'carr 17 calle13', 'piwisher1423@gmail.com', '5446546', '2026-03-09 12:42:04'),
-(4, 'paco', '5465464', 'carr 17 calle16', 'madra@gmail.com', '5446546', '2026-03-10 07:34:51');
+(4, 'paco', '5465464', 'carr 17 calle16', 'madra@gmail.com', '5446546', '2026-03-10 07:34:51'),
+(5, 'mari', '3215754216', 'pinoli', 'ma@gmail.com', '5446546', '2026-03-10 09:59:31');
 
 --
 -- Índices para tablas volcadas
@@ -179,25 +193,25 @@ ALTER TABLE `proveedores`
 -- AUTO_INCREMENT de la tabla `historial_salida`
 --
 ALTER TABLE `historial_salida`
-  MODIFY `id_historial_salida` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_historial_salida` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT de la tabla `historial_venta`
 --
 ALTER TABLE `historial_venta`
-  MODIFY `id_historial_venta` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+  MODIFY `id_historial_venta` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT de la tabla `productos`
 --
 ALTER TABLE `productos`
-  MODIFY `id_producto` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_producto` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT de la tabla `proveedores`
 --
 ALTER TABLE `proveedores`
-  MODIFY `id_proveedor` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id_proveedor` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- Restricciones para tablas volcadas

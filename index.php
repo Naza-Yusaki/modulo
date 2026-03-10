@@ -127,6 +127,32 @@ if ($tab == 'ventas') {
         }
     }
 }
+// ========== DATOS PARA LISTA DE PRECIOS ==========
+$productos_precios = [];
+
+// Obtener productos para la lista de precios
+$sql_precios = "SELECT 
+                    p.id_producto,
+                    p.nombre_producto,
+                    p.marca,
+                    p.modulo,
+                    p.cantidad_unidad,
+                    p.precio_venta_unidad,
+                    p.precio_venta_cantidad_grande,
+                    pr.nombre_proveedor,
+                    (p.cantidad_grande * p.cantidad_unidad + p.unidades_sueltas) as stock_total
+                FROM productos p
+                LEFT JOIN proveedores pr ON p.id_proveedor = pr.id_proveedor
+                WHERE p.precio_venta_unidad > 0 OR p.precio_venta_cantidad_grande > 0
+                ORDER BY p.nombre_producto ASC";
+
+$result_precios = $conn->query($sql_precios);
+
+if ($result_precios && $result_precios->num_rows > 0) {
+    while ($row = $result_precios->fetch_assoc()) {
+        $productos_precios[] = $row;
+    }
+}
 // ===== DATOS PARA PROVEEDORES =====
 if ($tab == 'proveedores') {
     // Obtener todos los proveedores
@@ -629,6 +655,8 @@ if ($tab == 'salidas') {
             <div class="tab <?php echo $tab == 'ventas' ? 'active' : ''; ?>">
                 <a href="?tab=ventas">💰 Ventas</a>
             </div>
+            <!-- NUEVO BOTÓN -->
+            <button class="tab-btn" onclick="window.open('lista_precios.php', '_blank')">🏷️ Lista Precios</button>
         </div>
 
         <div class="main-content">
@@ -1619,7 +1647,6 @@ if ($tab == 'salidas') {
                         </div>
                     </div>
                 </div>
-
                 <!-- Punto de Venta (POS) Mejorado -->
                 <div class="form-container">
                     <h2>💰 Registrar Venta</h2>
@@ -1747,6 +1774,12 @@ if ($tab == 'salidas') {
                                 <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 10px; font-size: 1.2em; padding: 15px;" id="btn-pagar" disabled>
                                     💰 Pagar $<span id="btn-total">0</span>
                                 </button>
+                                <!-- En el panel derecho, cerca del botón de pagar -->
+                                <div style="margin: 10px 0; display: flex; gap: 10px;">
+                                    <button type="button" class="btn btn-warning" onclick="aplicarDescuentoGeneral()" style="flex: 1;">
+                                        🏷️ Aplicar descuento general
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -2175,20 +2208,29 @@ if ($tab == 'salidas') {
                         actualizarCarrito();
                     }
 
+                    // ========== MODIFICAR LA FUNCIÓN actualizarCarrito EXISTENTE ==========
+                    // REEMPLAZA TU FUNCIÓN actualizarCarrito() actual con esta versión mejorada:
+
                     function actualizarCarrito() {
                         const tbody = document.getElementById('carrito-body');
                         let total = 0;
 
                         if (carrito.length === 0) {
-                            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">El carrito está vacío</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">El carrito está vacío</td></tr>';
                             document.getElementById('btn-pagar').disabled = true;
                         } else {
                             let html = '';
                             carrito.forEach((item, index) => {
                                 total += item.subtotal;
+
+                                // Verificar si tiene descuento
+                                const tieneDescuento = item.descuento_aplicado && item.descuento_aplicado > 0;
+                                const descuentoBadge = tieneDescuento ?
+                                    `<span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-left: 5px;" title="${item.motivo_descuento || 'Descuento'}">-$${item.descuento_aplicado.toLocaleString()}</span>` : '';
+
                                 html += `
                 <tr>
-                    <td>${item.nombre}</td>
+                    <td>${item.nombre} ${descuentoBadge}</td>
                     <td>
                         ${item.tipo === 'unidad' ? 'Unidad' : item.modulo}
                         ${item.tipo === 'grande' ? `<br><small>${item.unidades_por_modulo} und c/u</small>` : ''}
@@ -2205,9 +2247,17 @@ if ($tab == 'salidas') {
                             `$${item.precio_grande}`
                         }
                     </td>
-                    <td>$${item.subtotal.toLocaleString()}</td>
                     <td>
-                        <button class="btn-eliminar-item" onclick="eliminarDelCarrito(${index})">✕</button>
+                        <span style="font-weight: bold; ${tieneDescuento ? 'color: #dc3545;' : 'color: #28a745;'}">
+                            $${item.subtotal.toLocaleString()}
+                        </span>
+                        ${tieneDescuento ? 
+                            `<br><small style="color: #666;">Original: $${item.precio_original.toLocaleString()}</small>` : ''
+                        }
+                    </td>
+                    <td>
+                        <button class="btn-eliminar-item" onclick="editarPrecioItem(${index})" style="background: #ffc107; color: black; margin-right: 5px;" title="Editar precio">✏️</button>
+                        <button class="btn-eliminar-item" onclick="eliminarDelCarrito(${index})" title="Eliminar">✕</button>
                     </td>
                 </tr>
             `;
@@ -2230,6 +2280,125 @@ if ($tab == 'salidas') {
                             calcularCambioMixto();
                         }
                     }
+
+                    // ========== NUEVAS FUNCIONES PARA DESCUENTOS ==========
+                    // COLOCA TODO ESTE CÓDIGO NUEVO AQUÍ, DESPUÉS DE actualizarCarrito()
+
+                    // Función para editar precio de un item en el carrito
+                    function editarPrecioItem(index) {
+                        const item = carrito[index];
+
+                        // Crear modal flotante para editar precio
+                        const modalHtml = `
+        <div id="modal-precio" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000;">
+            <div style="background: white; padding: 30px; border-radius: 15px; max-width: 400px; width: 90%;">
+                <h3 style="margin-bottom: 20px; color: #333;">✏️ Editar Precio - ${item.nombre}</h3>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Precio actual:</label>
+                    <div style="font-size: 1.2em; color: #666;">$${item.subtotal.toLocaleString()}</div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Nuevo precio:</label>
+                    <input type="number" id="nuevo-precio" class="form-control" value="${item.subtotal}" min="0" step="100" style="font-size: 1.2em;">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Motivo del descuento:</label>
+                    <select id="motivo-descuento" class="form-control">
+                        <option value="Precio al mayor">📦 Precio al mayor</option>
+                        <option value="Cliente frecuente">⭐ Cliente frecuente</option>
+                        <option value="Promoción especial">🎉 Promoción especial</option>
+                        <option value="Ajuste manual">✏️ Ajuste manual</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="cerrarModalPrecio()">Cancelar</button>
+                    <button class="btn btn-success" onclick="aplicarPrecioNuevo(${index})">Aplicar Cambio</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+                        document.body.insertAdjacentHTML('beforeend', modalHtml);
+                    }
+
+                    function cerrarModalPrecio() {
+                        const modal = document.getElementById('modal-precio');
+                        if (modal) modal.remove();
+                    }
+
+                    function aplicarPrecioNuevo(index) {
+                        const nuevoPrecio = parseFloat(document.getElementById('nuevo-precio').value);
+                        const motivo = document.getElementById('motivo-descuento').value;
+
+                        if (isNaN(nuevoPrecio) || nuevoPrecio < 0) {
+                            alert('Ingrese un precio válido');
+                            return;
+                        }
+
+                        // Guardar precio original antes de modificarlo
+                        if (!carrito[index].precio_original) {
+                            carrito[index].precio_original = carrito[index].subtotal;
+                        }
+
+                        // Aplicar nuevo precio
+                        carrito[index].subtotal = nuevoPrecio;
+                        carrito[index].descuento_aplicado = carrito[index].precio_original - nuevoPrecio;
+                        carrito[index].motivo_descuento = motivo;
+
+                        // Actualizar carrito
+                        actualizarCarrito();
+                        cerrarModalPrecio();
+                    }
+
+                    // Función para aplicar descuento general
+                    function aplicarDescuentoGeneral() {
+                        if (carrito.length === 0) {
+                            alert('El carrito está vacío');
+                            return;
+                        }
+
+                        const descuento = prompt('Ingrese el porcentaje de descuento a aplicar:', '10');
+
+                        if (descuento === null) return;
+
+                        const porcentaje = parseFloat(descuento);
+                        if (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+                            alert('Ingrese un porcentaje válido (0-100)');
+                            return;
+                        }
+
+                        let totalOriginal = 0;
+                        carrito.forEach(item => {
+                            totalOriginal += item.subtotal;
+                        });
+
+                        const factor = (100 - porcentaje) / 100;
+                        let nuevoTotal = 0;
+
+                        carrito.forEach(item => {
+                            if (!item.precio_original) {
+                                item.precio_original = item.subtotal;
+                            }
+                            item.subtotal = Math.round(item.precio_original * factor / 100) * 100; // Redondear a múltiplos de 100
+                            item.descuento_aplicado = item.precio_original - item.subtotal;
+                            item.motivo_descuento = `Descuento del ${porcentaje}%`;
+                            nuevoTotal += item.subtotal;
+                        });
+
+                        actualizarCarrito();
+
+                        alert(`✅ Descuento aplicado correctamente\n` +
+                            `Total original: $${totalOriginal.toLocaleString()}\n` +
+                            `Nuevo total: $${nuevoTotal.toLocaleString()}\n` +
+                            `Ahorro: $${(totalOriginal - nuevoTotal).toLocaleString()}`);
+                    }
+
+
 
                     function eliminarDelCarrito(index) {
                         carrito.splice(index, 1);
@@ -2611,6 +2780,105 @@ if ($tab == 'salidas') {
             }
         });
     </script>
+
+    <script>
+        function buscarPrecios(termino) {
+            const resultadosDiv = document.getElementById('resultados_precios');
+
+            if (termino.length < 1) {
+                resultadosDiv.style.display = 'none';
+                return;
+            }
+
+            termino = termino.toLowerCase();
+            const productos = <?php echo json_encode($productos_precios ?? []); ?>;
+
+            const resultados = productos.filter(p =>
+                p.nombre_producto.toLowerCase().includes(termino) ||
+                (p.marca && p.marca.toLowerCase().includes(termino))
+            ).slice(0, 15);
+
+            if (resultados.length > 0) {
+                let html = '';
+                resultados.forEach(p => {
+                    html += `
+                <div style="padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;" 
+                     onmouseover="this.style.background='#f8f9fa'" 
+                     onmouseout="this.style.background='white'"
+                     onclick="seleccionarProductoPrecio('${p.nombre_producto}')">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="font-size: 1.1em; color: #333;">${p.nombre_producto}</strong>
+                            ${p.marca ? `<span style="color: #666; margin-left: 8px;">${p.marca}</span>` : ''}
+                            <div style="font-size: 0.85em; color: #999; margin-top: 3px;">
+                                Proveedor: ${p.nombre_proveedor || 'N/A'} | Stock: ${p.stock_total} und
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.2em; font-weight: bold; color: #28a745;">$${p.precio_venta_unidad.toLocaleString()}</div>
+                            <div style="font-size: 0.85em; color: #666;">${p.modulo}: $${p.precio_venta_cantidad_grande.toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+                });
+                resultadosDiv.innerHTML = html;
+                resultadosDiv.style.display = 'block';
+            } else {
+                resultadosDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">❌ No se encontraron productos</div>';
+                resultadosDiv.style.display = 'block';
+            }
+        }
+
+        function seleccionarProductoPrecio(nombre) {
+            document.getElementById('buscador_precios').value = nombre;
+            document.getElementById('resultados_precios').style.display = 'none';
+        }
+    </script>
+    <script>
+        function aplicarDescuentoGeneral() {
+            if (carrito.length === 0) {
+                alert('El carrito está vacío');
+                return;
+            }
+
+            const descuento = prompt('Ingrese el porcentaje de descuento a aplicar:', '10');
+
+            if (descuento === null) return;
+
+            const porcentaje = parseFloat(descuento);
+            if (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+                alert('Ingrese un porcentaje válido (0-100)');
+                return;
+            }
+
+            let totalOriginal = 0;
+            carrito.forEach(item => {
+                totalOriginal += item.subtotal;
+            });
+
+            const factor = (100 - porcentaje) / 100;
+            let nuevoTotal = 0;
+
+            carrito.forEach(item => {
+                if (!item.precio_original) {
+                    item.precio_original = item.subtotal;
+                }
+                item.subtotal = Math.round(item.precio_original * factor / 100) * 100; // Redondear a múltiplos de 100
+                item.descuento_aplicado = item.precio_original - item.subtotal;
+                item.motivo_descuento = `Descuento del ${porcentaje}%`;
+                nuevoTotal += item.subtotal;
+            });
+
+            actualizarCarrito();
+
+            alert(`✅ Descuento aplicado correctamente\n` +
+                `Total original: $${totalOriginal.toLocaleString()}\n` +
+                `Nuevo total: $${nuevoTotal.toLocaleString()}\n` +
+                `Ahorro: $${(totalOriginal - nuevoTotal).toLocaleString()}`);
+        }
+    </script>
+
 </body>
 
 </html>

@@ -8,8 +8,11 @@ $fecha = isset($_GET['fecha']) ? $_GET['fecha'] : date('Y-m-d');
 $fecha_inicio = $fecha . ' 00:00:00';
 $fecha_fin = $fecha . ' 23:59:59';
 
-// Obtener ventas del día
+// En la consulta SQL de ventas
 $sql_ventas = "SELECT hv.*, 
+               descuento_aplicado,
+               precio_original,
+               motivo_descuento,
                CASE 
                   WHEN hv.metodo_pago LIKE 'DEVUELTA%' THEN 'Anulada'
                   WHEN hv.metodo_pago LIKE 'DEVOLUCION%' THEN 'Devolución'
